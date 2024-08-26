@@ -19,6 +19,10 @@
 
 }
 
+.botones-excel button{
+  margin-right: 15px;
+}
+
 .body-containerP {
   background-color: white;
   width: 100%;
@@ -111,7 +115,7 @@
     --size: 40px;
 
     position: relative;
-    background: linear-gradient(90deg, #9af3ad, #4dc962);
+    background: linear-gradient(90deg, #963232, #750101);
     line-height: 0;
     perspective: 400px;
     font-size: var(--size);

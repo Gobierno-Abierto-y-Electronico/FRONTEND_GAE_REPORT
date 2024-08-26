@@ -137,6 +137,19 @@ export const getNotesByCreator = async () => {
 
 };
 
+export const getReporteData = async () => {
+
+    try {
+        return await apiClient.get('/report/');
+    } catch (e) {
+        return {
+            error: true,
+            e
+        }
+    }
+
+};
+
 export const createNote = async (data) => {
 
     try {
@@ -148,6 +161,30 @@ export const createNote = async (data) => {
         }
     }
 
+};
+
+export const putUnity = async (id, data) => {
+
+    try {
+        return await apiClient.put(`/unidad/${id}`, data);
+    } catch (e) {
+        return {
+            error: true,
+            e
+        }
+    }
+};
+
+export const storeReporteData =async (data) => {
+    try {
+        console.log(data), "data enviada en la api al backend";
+        return await apiClient.post(`/report/reportes/store`, data);
+    } catch (e) {
+        return {
+            error: true,
+            e
+        }
+    }
 };
 
 export const updateUser = async (id, data) => {
@@ -261,6 +298,17 @@ export const getPersonalById = async (id) => {
     try {
         return await apiClient.get(`/personal/${id}`);
         console.log('personal---', id);
+    } catch (e) {
+        return {
+            error: true,
+            e
+        }
+    }
+}
+
+export const getUserById = async (id) => {
+    try {
+        return await apiClient.get(`/user/${id}`);
     } catch (e) {
         return {
             error: true,

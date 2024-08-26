@@ -22,6 +22,7 @@ export const useGenerarExcel = () => {
       }
     } catch (e) {
       setError('Hubo un error al generar el archivo de Excel.');
+      console.log(e)
     } finally {
       setIsGenerating(false);
     }

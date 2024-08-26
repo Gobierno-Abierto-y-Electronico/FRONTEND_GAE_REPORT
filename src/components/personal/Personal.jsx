@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from "../Input.jsx";
 import { useNavigate } from "react-router-dom";
-import { useFetchPersonal, useGenerarExcel } from '../../shared/hooks/index.js';
+import { useFetchPersonal } from '../../shared/hooks/index.js';
 import { useUserDetails } from "../../shared/hooks/useUserDetails";
 import { useUpdateUser } from "../../shared/hooks/useUpdateUser";
+import { useUpdateUnity } from "../../shared/hooks/useUpdateUnity";
+import { useFetchUnity } from '../../shared/hooks/useFetchUnity.jsx';
+import { useStoreReporte } from '../../shared/hooks/useStoreReporte.jsx';
+import { useGenerarExcel } from '../../shared/hooks/useGenerarExcel.jsx';
+import { useGetReport } from '../../shared/hooks/useGetReport.jsx';
 import './personal.css';
 import toast from 'react-hot-toast';
 
@@ -18,36 +23,56 @@ export const Personal = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [selectedPersonal, setSelectedPersonal] = useState({});
   const [pepaPig, setPepaPig] = useState([]);
-  const { report, id, userDetails, setReport } = useUserDetails();
+  const { id, userDetails, setReport } = useUserDetails();
   const { updatedUser, actualizarReporte } = useUpdateUser();
+  const { actualizarUnidad, response } = useUpdateUnity();
+  const { storeReporteData } = useStoreReporte();
+  const { reportResponse } = useGetReport();
+  const { report } = useGenerarExcel();
+  const { assistance } = useFetchUnity(userDetails.unidadId);
 
+  // Verificar si el usuario tiene el correo requerido
+  const isUserAllowedToGenerateExcel = userDetails.email === 'jaime@gmail.com';
 
-  const handleGenerateExcel = () => {
-    if (userDetails.report) {
+  const handleEnviarReporte = async () => {
+    if (!assistance.unity.report) {
       const allPersonalList = personales.personales.map((personal) => {
         return {
           ...personal,
           selected: selectedPersonal[personal._id] || false,
         };
       });
-  
-      setPepaPig((prevPepaPig) => prevPepaPig.concat(allPersonalList));
-  
-      if (pepaPig.length > 0) {
-        console.log(pepaPig.length);
-        // generateExcelForSelected(pepaPig);
-      }
 
-      userDetails.report = false;
-      actualizarReporte(id, userDetails);
+      assistance.unity.report = true;
+
+      try {
+        await storeReporteData(allPersonalList);
+        console.log(allPersonalList, "pepapig");
+        await actualizarUnidad(assistance.unity._id, assistance.unity);
+        toast.success('Informe enviado');
+      } catch (error) {
+        console.error('Error al actualizar el reporte en la base de datos:', error);
+        toast.error('Error al enviar el informe');
+      }
     } else {
-      console.log(userDetails.report)
+      console.log(assistance.unity.report, "ya enviado");
       toast.error('Ya se envió el informe de asistencia de hoy');
-      console.log(pepaPig.length);
+      console.log(allPersonalList.length);
     }
   };
-  
 
+  const handleGenerateExcel = async () => {
+    try {
+      if (reportResponse.data.reportes.length > 0) {
+        toast.success('Excel generado');
+        generateExcelForSelected(reportResponse.data.reportes);
+      } else {
+        toast.error('No hay informes enviados');
+      }
+    } catch (e) {
+      toast.error('Hubo un problema al generar el Excel');
+    }
+  };
 
   const formattedDate = today.toLocaleDateString('es-ES', {
     day: '2-digit',
@@ -67,7 +92,6 @@ export const Personal = () => {
       showError: false,
     },
   });
-
 
   useEffect(() => {
     if (personales && personales.personales) {
@@ -138,7 +162,7 @@ export const Personal = () => {
           <hr />
         </div>
         <div className='selectAll'>
-          <h2>Todos Presentes</h2>
+          <h2>Marcar a todos</h2>
           <div className="checkbox-wrapper-5">
             <div className="check">
               <input
@@ -172,11 +196,20 @@ export const Personal = () => {
             disabled={true}
             onBlurHandler={handleInputValidationOnBlur}
           />
-          <button className="pushable" onClick={handleGenerateExcel} disabled={isGenerating || report}>
-            <span className="shadow"></span>
-            <span className="edge"></span>
-            <span className="front">Enviar</span>
-          </button>
+          <div className='botones-excel'>
+            <button className="pushable" onClick={handleEnviarReporte} disabled={isGenerating || report}>
+              <span className="shadow"></span>
+              <span className="edge"></span>
+              <span className="front">Enviar</span>
+            </button>
+            {isUserAllowedToGenerateExcel && (
+              <button className="pushable" onClick={handleGenerateExcel} disabled={isGenerating || report}>
+                <span className="shadow"></span>
+                <span className="edge"></span>
+                <span className="front">Generar Excel</span>
+              </button>
+            )}
+          </div>
           {message && <p>{message}</p>}
         </div>
         <div className='posts-personal'>
