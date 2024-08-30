@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disabody {ble react-hooks/exhaustive-deps */
 import { Navbar } from "../../components/Navbar";
 import "./dashboardPage.css";
 import { useUserDetails } from "../../shared/hooks";

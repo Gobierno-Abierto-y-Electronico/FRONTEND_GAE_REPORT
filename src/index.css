@@ -1,4 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 
 :root {
   line-height: 1.5;
@@ -32,8 +36,5 @@ code {
   }
   a:hover {
     color: #0b336b;
-  }
-  button {
-    background-color: #f9f9f9;
   }
 }

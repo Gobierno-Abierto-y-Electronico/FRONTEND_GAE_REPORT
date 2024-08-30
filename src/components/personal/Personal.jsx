@@ -9,20 +9,54 @@ import { useFetchUnity } from '../../shared/hooks/useFetchUnity.jsx';
 import { useStoreReporte } from '../../shared/hooks/useStoreReporte.jsx';
 import { useGenerarExcel } from '../../shared/hooks/useGenerarExcel.jsx';
 import { useGetReport } from '../../shared/hooks/useGetReport.jsx';
+import { DropdownButton } from '.././dropdown/Dropdown.jsx';
 import './personal.css';
 import toast from 'react-hot-toast';
 
+const handleReasonSelect = (reason, id) => {
+  if (reason === 'Otro') {
+    setCurrentPersonalId(id);
+    setShowCustomReasonInput(true);
+  } else {
+    setSelectedReason((prevSelected) => ({
+      ...prevSelected,
+      [id]: reason,
+    }));
+  }
+};
+
+const handleCustomReasonChange = (e) => {
+  setCustomReason(e.target.value);
+};
+
+const handleSaveCustomReason = () => {
+  if (customReason.trim() !== '' && currentPersonalId !== null) {
+    setSelectedReason((prevSelected) => ({
+      ...prevSelected,
+      [currentPersonalId]: customReason,
+    }));
+    setCustomReason('');
+    setCurrentPersonalId(null);
+    setShowCustomReasonInput(false);
+  }
+};
+
 export const Personal = () => {
+  const [selectedPersonal, setSelectedPersonal] = useState({});
+  const [selectedReason, setSelectedReason] = useState({});
+  const [showCustomReasonInput, setShowCustomReasonInput] = useState(false);
+  const [customReason, setCustomReason] = useState('');
+  const [currentPersonalId, setCurrentPersonalId] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+
   const { generateExcelForSelected, isGenerating } = useGenerarExcel();
   const { personales, isLoading: isLoadingPersonal, error } = useFetchPersonal();
   const today = new Date();
   const now = new Date();
-
   const currentTime = now.toTimeString().split(' ')[0].slice(0, 5);
   const [message, setMessage] = useState('');
   const [selectAll, setSelectAll] = useState(false);
-  const [selectedPersonal, setSelectedPersonal] = useState({});
-  const [pepaPig, setPepaPig] = useState([]);
   const { id, userDetails, setReport } = useUserDetails();
   const { updatedUser, actualizarReporte } = useUpdateUser();
   const { actualizarUnidad, response } = useUpdateUnity();
@@ -31,7 +65,6 @@ export const Personal = () => {
   const { report } = useGenerarExcel();
   const { assistance } = useFetchUnity(userDetails.unidadId);
 
-  // Verificar si el usuario tiene el correo requerido
   const isUserAllowedToGenerateExcel = userDetails.email === 'jaime@gmail.com';
 
   const handleEnviarReporte = async () => {
@@ -40,6 +73,7 @@ export const Personal = () => {
         return {
           ...personal,
           selected: selectedPersonal[personal._id] || false,
+          reason: selectedReason[personal._id] || "No especificado",
         };
       });
 
@@ -154,8 +188,28 @@ export const Personal = () => {
     }));
   };
 
+  const handleReasonSelect = (reason, id) => {
+    setSelectedReason((prevSelected) => ({
+      ...prevSelected,
+      [id]: reason,
+    }));
+  };
+
+  const handleDocumentClick = (e) => {
+    if (!e.target.closest('.dropdown')) {
+      setDropdownOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
+
   return (
-    <div className='body-containerP'>
+    <div className='personal'>
       <div className="two-titles">
         <div className='titlePost'>
           <h1>Control de Personal</h1>
@@ -175,6 +229,7 @@ export const Personal = () => {
             </div>
           </div>
         </div>
+        {/* Include DropdownButton here */}
       </div>
       <div className='personal-containerr'>
         <div className='first-container'>
@@ -229,8 +284,15 @@ export const Personal = () => {
                       onChange={(e) => handleCheckboxChange(e, personal._id)}
                     />
                     <span className="checkbox-tile">
-                      <h3>{`${personal.name} ${personal.lastName}`}</h3>
-                      <p>{personal.number}</p>
+                      <div className="checkbox-container">
+                        <div className="checkbox-info">
+                          <h3>{`${personal.name} ${personal.lastName}`}</h3>
+                          <p>{personal.number}</p>
+                        </div>
+                        <div className="checkbox-dropdown">
+                          <DropdownButton onSelect={(reason) => handleReasonSelect(reason, personal._id)} />
+                        </div>
+                      </div>
                     </span>
                   </label>
                 </div>
@@ -241,6 +303,17 @@ export const Personal = () => {
           )}
         </div>
       </div>
+      {showCustomReasonInput && (
+        <div className="custom-reason-container">
+          <input
+            type="text"
+            value={customReason}
+            onChange={handleCustomReasonChange}
+            placeholder="Escribe la razón"
+          />
+          <button onClick={handleSaveCustomReason}>Guardar</button>
+        </div>
+      )}
     </div>
   );
 };
