@@ -3,6 +3,7 @@ import { getReporteData } from '../../services/api';
 
 export const useGetReport = () => {
     const [reportResponse, setReport] = useState([]);
+    const [fechaReport, setFecha] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -10,8 +11,11 @@ export const useGetReport = () => {
         const fetchReport = async () => {
             try {
                 const data = await getReporteData();
-                console.log(data);
                 setReport(data);
+                console.log(data, "data reporte");
+                if(data.data){
+                    setFecha(data.data.createdAt);
+                }
             } catch (err) {
                 setError(err);
             } finally {
@@ -22,5 +26,10 @@ export const useGetReport = () => {
         fetchReport();
     }, []);
 
-    return { reportResponse, loading, error };
+    return {
+        reportResponse,
+        fechaReport,
+        loading,
+        error
+    };
 };

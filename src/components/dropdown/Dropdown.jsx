@@ -14,11 +14,13 @@ export const DropdownButton = ({ onSelect }) => {
   };
 
   const handleSelect = (reason) => {
-    setSelectedReason(reason);
-    setDropdownOpen(false);
     if (reason === "Otro") {
+      setSelectedReason(reason);
       setShowCustomInput(true);
     } else {
+      setSelectedReason(reason);
+      setDropdownOpen(false);
+      setShowCustomInput(false);
       onSelect(reason);
     }
   };
@@ -29,10 +31,11 @@ export const DropdownButton = ({ onSelect }) => {
 
   const handleSaveCustomReason = () => {
     if (customReason.trim() !== '') {
+      setSelectedReason(customReason);
       onSelect(customReason);
       setCustomReason('');
       setShowCustomInput(false);
-      setSelectedReason(customReason);
+      setDropdownOpen(false);
     }
   };
 
@@ -56,12 +59,12 @@ export const DropdownButton = ({ onSelect }) => {
           </a>
         ))}
         {showCustomInput && (
-          <div className="custom-reason-container">
+          <div className="custom-reason-input">
             <input
               type="text"
               value={customReason}
               onChange={handleCustomReasonChange}
-              placeholder="Escribe la razón"
+              placeholder="Escribe tu razón"
             />
             <button onClick={handleSaveCustomReason}>Guardar</button>
           </div>

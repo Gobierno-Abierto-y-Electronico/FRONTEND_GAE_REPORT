@@ -45,39 +45,91 @@ export const Personal = () => {
   const [selectedPersonal, setSelectedPersonal] = useState({});
   const [selectedReason, setSelectedReason] = useState({});
   const [showCustomReasonInput, setShowCustomReasonInput] = useState(false);
-  const [customReason, setCustomReason] = useState('');
-  const [currentPersonalId, setCurrentPersonalId] = useState(null);
+  const [message, setMessage] = useState('');
+  const [fechaDelReporte, setFechaDelReporte] = useState('');
+  const [todayDate, setTodayDate] = useState('');
+  const [selectAll, setSelectAll] = useState(false);
+  const [customReason] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
-
+  const [showComments, setShowComments] = useState(false);
+  const [selectedPublication, setSelectedPublication] = useState(null);
 
   const { generateExcelForSelected, isGenerating } = useGenerarExcel();
   const { personales, isLoading: isLoadingPersonal, error } = useFetchPersonal();
   const today = new Date();
   const now = new Date();
   const currentTime = now.toTimeString().split(' ')[0].slice(0, 5);
-  const [message, setMessage] = useState('');
-  const [selectAll, setSelectAll] = useState(false);
-  const { id, userDetails, setReport } = useUserDetails();
-  const { updatedUser, actualizarReporte } = useUpdateUser();
+  const { userDetails, setReport } = useUserDetails();
   const { actualizarUnidad, response } = useUpdateUnity();
   const { storeReporteData } = useStoreReporte();
-  const { reportResponse } = useGetReport();
+  const { reportResponse, fechaReport } = useGetReport();
   const { report } = useGenerarExcel();
   const { assistance } = useFetchUnity(userDetails.unidadId);
 
+  console.log(fechaReport, "fecha reporte 1");
+
   const isUserAllowedToGenerateExcel = userDetails.email === 'jaime@gmail.com';
 
+
+
+  useEffect(() => {
+    if (reportResponse && fechaReport) {
+      const date = new Date(fechaReport);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      setFechaDelReporte(`${year}-${month}-${day}`);
+    }
+
+    const today = new Date();
+    const todayYear = today.getFullYear();
+    const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+    const todayDay = String(today.getDate()).padStart(2, '0');
+    setTodayDate(`${todayYear}-${todayMonth}-${todayDay}`);
+  }, [fechaReport, reportResponse]);
+
+  const handleCustomReasonChange = (e) => {
+    setCustomReason(e.target.value);
+  };
+
+  const handleReasonSelect = (reason, id) => {
+    if (reason === 'Otro') {
+      setCurrentPersonalId(id);
+      setShowCustomReasonInput(true);
+    } else {
+      setSelectedReason((prevSelected) => ({
+        ...prevSelected,
+        [id]: reason,
+      }));
+    }
+  };
+  const handleSaveCustomReason = () => {
+    if (customReason.trim() !== '' && currentPersonalId !== null) {
+      setSelectedReason((prevSelected) => ({
+        ...prevSelected,
+        [currentPersonalId]: customReason,
+      }));
+      setCustomReason('');
+      setCurrentPersonalId(null);
+      setShowCustomReasonInput(false);
+    }
+  };
   const handleEnviarReporte = async () => {
-    if (!assistance.unity.report) {
+    console.log(reportResponse, "reporte");
+    console.log(fechaDelReporte, "--------------------------------------------", todayDate);
+
+    // Compare dates
+    if (todayDate !== fechaDelReporte) {
       const allPersonalList = personales.personales.map((personal) => {
         return {
           ...personal,
           selected: selectedPersonal[personal._id] || false,
-          reason: selectedReason[personal._id] || "No especificado",
+          reason: selectedReason[personal._id] || "Asistió",
         };
       });
 
-      assistance.unity.report = true;
+      assistance.unity.report = false;
+      assistance.unity.dateOfReportByUnity = todayDate;
 
       try {
         await storeReporteData(allPersonalList);
@@ -91,7 +143,6 @@ export const Personal = () => {
     } else {
       console.log(assistance.unity.report, "ya enviado");
       toast.error('Ya se envió el informe de asistencia de hoy');
-      console.log(allPersonalList.length);
     }
   };
 
@@ -105,14 +156,9 @@ export const Personal = () => {
       }
     } catch (e) {
       toast.error('Hubo un problema al generar el Excel');
+      console.log(e);
     }
   };
-
-  const formattedDate = today.toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
 
   const [formState, setFormState] = useState({
     fecha: {
@@ -188,19 +234,20 @@ export const Personal = () => {
     }));
   };
 
-  const handleReasonSelect = (reason, id) => {
-    setSelectedReason((prevSelected) => ({
-      ...prevSelected,
-      [id]: reason,
-    }));
-  };
-
   const handleDocumentClick = (e) => {
     if (!e.target.closest('.dropdown')) {
       setDropdownOpen(false);
     }
   };
+  const handleCommentClick = (publication) => {
+    setSelectedPublication(publication);
+    setShowComments(true);
+  };
 
+  const handleCloseComments = () => {
+    setShowComments(false);
+    setSelectedPublication(null);
+  };
   useEffect(() => {
     document.addEventListener('click', handleDocumentClick);
     return () => {
@@ -236,7 +283,7 @@ export const Personal = () => {
           <Input
             field='fecha'
             label='Fecha'
-            value={formattedDate}
+            value={fechaDelReporte}
             onChangeHandler={handleInputValueChange}
             type='text'
             disabled={true}
@@ -290,7 +337,9 @@ export const Personal = () => {
                           <p>{personal.number}</p>
                         </div>
                         <div className="checkbox-dropdown">
-                          <DropdownButton onSelect={(reason) => handleReasonSelect(reason, personal._id)} />
+                          <DropdownButton 
+                            onSelect={(reason) => handleReasonSelect(reason, personal._id)}
+                          />                      
                         </div>
                       </div>
                     </span>
@@ -308,11 +357,17 @@ export const Personal = () => {
           <input
             type="text"
             value={customReason}
-            onChange={handleCustomReasonChange}
+            onChange={(e) => setCustomReason(e.target.value)}
             placeholder="Escribe la razón"
           />
           <button onClick={handleSaveCustomReason}>Guardar</button>
         </div>
+      )}
+      {showComments && selectedPublication && (
+        <Comments 
+          publiUnica={selectedPublication}
+          onClose={handleCloseComments}
+        />
       )}
     </div>
   );
