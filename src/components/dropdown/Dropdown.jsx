@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import './dropdown.css';
+import { Modal } from '../modal/Modal.jsx';
 
 export const DropdownButton = ({ onSelect }) => {
   const [selectedReason, setSelectedReason] = useState("default");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [customReason, setCustomReason] = useState('');
-  const [showCustomInput, setShowCustomInput] = useState(false);
 
   const reasons = ["Enfermedad", "Viene Tarde", "Otro"];
 
@@ -15,36 +16,30 @@ export const DropdownButton = ({ onSelect }) => {
 
   const handleSelect = (reason) => {
     if (reason === "Otro") {
-      setSelectedReason(reason);
-      setShowCustomInput(true);
+      setShowModal(true); // Mostrar el modal cuando se selecciona "Otro"
     } else {
-      setSelectedReason(reason);
-      setDropdownOpen(false);
-      setShowCustomInput(false);
-      onSelect(reason);
+      setSelectedReason(reason); // Seleccionar una de las razones predefinidas
+      setDropdownOpen(false); // Cerrar el dropdown
+      onSelect(reason); // Pasar la razón seleccionada al padre
     }
-  };
-
-  const handleCustomReasonChange = (e) => {
-    setCustomReason(e.target.value);
   };
 
   const handleSaveCustomReason = () => {
     if (customReason.trim() !== '') {
-      setSelectedReason(customReason);
-      onSelect(customReason);
-      setCustomReason('');
-      setShowCustomInput(false);
-      setDropdownOpen(false);
+      setSelectedReason("Otro"); // Seleccionar "Otro" después de guardar la razón personalizada
+      onSelect(customReason); // Pasar la razón personalizada al padre (o donde sea necesario)
+      setCustomReason(''); // Limpiar el campo de entrada en el modal
+      setShowModal(false); // Cerrar el modal después de guardar
+      setDropdownOpen(false); // Asegurarse de que el dropdown esté cerrado
     }
   };
 
   return (
     <div className="dropdown">
-      <button className="btn" type="button" id="dropdownMenuButton" onClick={toggleDropdown}>
+      <button className="btn" type="button" onClick={toggleDropdown}>
         {selectedReason === "default" ? "Selecciona una razón" : selectedReason}
       </button>
-      <div className={`dropdown-menu ${dropdownOpen ? 'show' : ''}`} aria-labelledby="dropdownMenuButton">
+      <div className={`dropdown-menu ${dropdownOpen ? 'show' : ''}`}>
         {reasons.map(reason => (
           <a
             key={reason}
@@ -58,18 +53,25 @@ export const DropdownButton = ({ onSelect }) => {
             {reason}
           </a>
         ))}
-        {showCustomInput && (
-          <div className="custom-reason-input">
-            <input
-              type="text"
-              value={customReason}
-              onChange={handleCustomReasonChange}
-              placeholder="Escribe tu razón"
-            />
-            <button onClick={handleSaveCustomReason}>Guardar</button>
-          </div>
-        )}
       </div>
+
+      <Modal show={showModal} onClose={() => setShowModal(false)}>
+        <div className="input-group">
+          <textarea
+            required={true}
+            type="text"
+            value={customReason}
+            className="input"
+            onChange={(e) => setCustomReason(e.target.value)}
+            placeholder="Describe la razón"
+          />
+        </div>
+        <div className='espacio'>
+          <button className='button' onClick={handleSaveCustomReason}>
+            <span>Guardar</span>
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };

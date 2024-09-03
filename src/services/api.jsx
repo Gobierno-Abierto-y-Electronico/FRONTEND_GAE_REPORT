@@ -175,15 +175,18 @@ export const putUnity = async (id, data) => {
     }
 };
 
-export const storeReporteData =async (data) => {
+export const storeReporteData = async ({ listado, fecha }) => {
     try {
-        console.log(data), "data enviada en la api al backend";
-        return await apiClient.post(`/report/reportes/store`, data);
+        const data = { listado, fecha };
+        console.log(data, "data enviada en la api al backend");
+        const response = await apiClient.post(`/report/reportes/store`, data);
+        return response.data;
     } catch (e) {
+        console.error('Error al enviar datos al backend:', e);
         return {
             error: true,
             e
-        }
+        };
     }
 };
 

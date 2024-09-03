@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from "../Input.jsx";
-import { useNavigate } from "react-router-dom";
 import { useFetchPersonal } from '../../shared/hooks/index.js';
 import { useUserDetails } from "../../shared/hooks/useUserDetails";
-import { useUpdateUser } from "../../shared/hooks/useUpdateUser";
 import { useUpdateUnity } from "../../shared/hooks/useUpdateUnity";
 import { useFetchUnity } from '../../shared/hooks/useFetchUnity.jsx';
 import { useStoreReporte } from '../../shared/hooks/useStoreReporte.jsx';
@@ -13,33 +11,6 @@ import { DropdownButton } from '.././dropdown/Dropdown.jsx';
 import './personal.css';
 import toast from 'react-hot-toast';
 
-const handleReasonSelect = (reason, id) => {
-  if (reason === 'Otro') {
-    setCurrentPersonalId(id);
-    setShowCustomReasonInput(true);
-  } else {
-    setSelectedReason((prevSelected) => ({
-      ...prevSelected,
-      [id]: reason,
-    }));
-  }
-};
-
-const handleCustomReasonChange = (e) => {
-  setCustomReason(e.target.value);
-};
-
-const handleSaveCustomReason = () => {
-  if (customReason.trim() !== '' && currentPersonalId !== null) {
-    setSelectedReason((prevSelected) => ({
-      ...prevSelected,
-      [currentPersonalId]: customReason,
-    }));
-    setCustomReason('');
-    setCurrentPersonalId(null);
-    setShowCustomReasonInput(false);
-  }
-};
 
 export const Personal = () => {
   const [selectedPersonal, setSelectedPersonal] = useState({});
@@ -88,10 +59,6 @@ export const Personal = () => {
     setTodayDate(`${todayYear}-${todayMonth}-${todayDay}`);
   }, [fechaReport, reportResponse]);
 
-  const handleCustomReasonChange = (e) => {
-    setCustomReason(e.target.value);
-  };
-
   const handleReasonSelect = (reason, id) => {
     if (reason === 'Otro') {
       setCurrentPersonalId(id);
@@ -103,39 +70,37 @@ export const Personal = () => {
       }));
     }
   };
-  const handleSaveCustomReason = () => {
-    if (customReason.trim() !== '' && currentPersonalId !== null) {
-      setSelectedReason((prevSelected) => ({
-        ...prevSelected,
-        [currentPersonalId]: customReason,
-      }));
-      setCustomReason('');
-      setCurrentPersonalId(null);
-      setShowCustomReasonInput(false);
-    }
-  };
+
+
   const handleEnviarReporte = async () => {
     console.log(reportResponse, "reporte");
     console.log(fechaDelReporte, "--------------------------------------------", todayDate);
 
-    // Compare dates
-    if (todayDate !== fechaDelReporte) {
+    // Verifica si la fecha actual es diferente a la fecha almacenada en la unidad
+    if (todayDate !== assistance.unity.dateOfReportByUnity) {
       const allPersonalList = personales.personales.map((personal) => {
         return {
           ...personal,
           selected: selectedPersonal[personal._id] || false,
-          reason: selectedReason[personal._id] || "Asistió",
+          reason: selectedReason[personal._id] || "No asistió",
         };
       });
 
+      // Actualiza la unidad para indicar que se ha enviado un reporte hoy
       assistance.unity.report = false;
       assistance.unity.dateOfReportByUnity = todayDate;
 
       try {
-        await storeReporteData(allPersonalList);
+        // Usa la fecha actual al llamar a `storeReporteData`
+        await storeReporteData(allPersonalList, todayDate);
         console.log(allPersonalList, "pepapig");
         await actualizarUnidad(assistance.unity._id, assistance.unity);
         toast.success('Informe enviado');
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+
       } catch (error) {
         console.error('Error al actualizar el reporte en la base de datos:', error);
         toast.error('Error al enviar el informe');
@@ -145,6 +110,10 @@ export const Personal = () => {
       toast.error('Ya se envió el informe de asistencia de hoy');
     }
   };
+
+
+  /*--------------------------------------------------*/
+
 
   const handleGenerateExcel = async () => {
     try {
@@ -239,21 +208,8 @@ export const Personal = () => {
       setDropdownOpen(false);
     }
   };
-  const handleCommentClick = (publication) => {
-    setSelectedPublication(publication);
-    setShowComments(true);
-  };
 
-  const handleCloseComments = () => {
-    setShowComments(false);
-    setSelectedPublication(null);
-  };
-  useEffect(() => {
-    document.addEventListener('click', handleDocumentClick);
-    return () => {
-      document.removeEventListener('click', handleDocumentClick);
-    };
-  }, []);
+
 
   return (
     <div className='personal'>
@@ -337,9 +293,9 @@ export const Personal = () => {
                           <p>{personal.number}</p>
                         </div>
                         <div className="checkbox-dropdown">
-                          <DropdownButton 
+                          <DropdownButton
                             onSelect={(reason) => handleReasonSelect(reason, personal._id)}
-                          />                      
+                          />
                         </div>
                       </div>
                     </span>
@@ -352,23 +308,6 @@ export const Personal = () => {
           )}
         </div>
       </div>
-      {showCustomReasonInput && (
-        <div className="custom-reason-container">
-          <input
-            type="text"
-            value={customReason}
-            onChange={(e) => setCustomReason(e.target.value)}
-            placeholder="Escribe la razón"
-          />
-          <button onClick={handleSaveCustomReason}>Guardar</button>
-        </div>
-      )}
-      {showComments && selectedPublication && (
-        <Comments 
-          publiUnica={selectedPublication}
-          onClose={handleCloseComments}
-        />
-      )}
     </div>
   );
 };
