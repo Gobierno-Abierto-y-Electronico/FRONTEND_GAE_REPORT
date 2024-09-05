@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from "../Input.jsx";
+import { useNavigate } from "react-router-dom";
 import { useFetchPersonal } from '../../shared/hooks/index.js';
 import { useUserDetails } from "../../shared/hooks/useUserDetails";
+import { useUpdateUser } from "../../shared/hooks/useUpdateUser";
 import { useUpdateUnity } from "../../shared/hooks/useUpdateUnity";
 import { useFetchUnity } from '../../shared/hooks/useFetchUnity.jsx';
 import { useStoreReporte } from '../../shared/hooks/useStoreReporte.jsx';
@@ -11,23 +13,23 @@ import { DropdownButton } from '.././dropdown/Dropdown.jsx';
 import './personal.css';
 import toast from 'react-hot-toast';
 
-
 export const Personal = () => {
+  const [isSendingReport, setIsSendingReport] = useState(false);
   const [selectedPersonal, setSelectedPersonal] = useState({});
   const [selectedReason, setSelectedReason] = useState({});
   const [showCustomReasonInput, setShowCustomReasonInput] = useState(false);
   const [message, setMessage] = useState('');
-  const [fechaDelReporte, setFechaDelReporte] = useState('');
+  const [fechaDeLaUnidad, setFechaDeLaUnidad] = useState('');
   const [todayDate, setTodayDate] = useState('');
   const [selectAll, setSelectAll] = useState(false);
-  const [customReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [selectedPublication, setSelectedPublication] = useState(null);
+  const [reportSent, setReportSent] = useState(false);
 
   const { generateExcelForSelected, isGenerating } = useGenerarExcel();
   const { personales, isLoading: isLoadingPersonal, error } = useFetchPersonal();
-  const today = new Date();
   const now = new Date();
   const currentTime = now.toTimeString().split(' ')[0].slice(0, 5);
   const { userDetails, setReport } = useUserDetails();
@@ -35,29 +37,21 @@ export const Personal = () => {
   const { storeReporteData } = useStoreReporte();
   const { reportResponse, fechaReport } = useGetReport();
   const { report } = useGenerarExcel();
-  const { assistance } = useFetchUnity(userDetails.unidadId);
-
-  console.log(fechaReport, "fecha reporte 1");
+  const { assistance, fecha} = useFetchUnity(userDetails.unidadId);
 
   const isUserAllowedToGenerateExcel = userDetails.email === 'jaime@gmail.com';
 
-
-
   useEffect(() => {
-    if (reportResponse && fechaReport) {
-      const date = new Date(fechaReport);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      setFechaDelReporte(`${year}-${month}-${day}`);
+    const currentDate = new Date().toISOString().split('T')[0];
+    setTodayDate(currentDate);
+  
+    if (fecha) {
+      const fechaUnity = new Date(fecha).toISOString().split('T')[0];
+      setFechaDeLaUnidad(fechaUnity);
     }
-
-    const today = new Date();
-    const todayYear = today.getFullYear();
-    const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
-    const todayDay = String(today.getDate()).padStart(2, '0');
-    setTodayDate(`${todayYear}-${todayMonth}-${todayDay}`);
-  }, [fechaReport, reportResponse]);
+  }, [fecha]);
+  console.log(fechaDeLaUnidad, "ayuda")
+  
 
   const handleReasonSelect = (reason, id) => {
     if (reason === 'Otro') {
@@ -71,34 +65,58 @@ export const Personal = () => {
     }
   };
 
+  useEffect(() => {
+    const fetchUnityData = async () => {
+      try {
+        const response = await fetch(`/api/unidades/${userDetails.unidadId}`);
+        const data = await response.json();
+        setReportSent(data.reportSent);
+      } catch (error) {
+        console.log('Error fetching unidad data:', error);
+      }
+    };
+
+    fetchUnityData();
+  }, [userDetails.unidadId]);
+
+  
+
+  
 
   const handleEnviarReporte = async () => {
     console.log(reportResponse, "reporte");
-    console.log(fechaDelReporte, "--------------------------------------------", todayDate);
+    console.log(fecha, "--------------------------------------------", todayDate);
+    console.log(todayDate, "Fecha actual ---------", fechaDeLaUnidad, "fecha de envio de la unuidad")
 
-    // Verifica si la fecha actual es diferente a la fecha almacenada en la unidad
-    if (todayDate !== assistance.unity.dateOfReportByUnity) {
+
+    if (todayDate !== fechaDeLaUnidad) {
       const allPersonalList = personales.personales.map((personal) => {
+        const isSelected = selectedPersonal[personal._id] || false;
+        const reason = isSelected
+          ? (selectedReason[personal._id] || "Sin justificar")
+          : " ";
+
         return {
           ...personal,
-          selected: selectedPersonal[personal._id] || false,
-          reason: selectedReason[personal._id] || "No asistió",
+          selected: isSelected,
+          reason: reason,
         };
       });
 
-      // Actualiza la unidad para indicar que se ha enviado un reporte hoy
       assistance.unity.report = false;
       assistance.unity.dateOfReportByUnity = todayDate;
+      console.log(assistance.unity.dateOfReportByUnity, todayDate, "Datos para actualizar")
 
       try {
-        // Usa la fecha actual al llamar a `storeReporteData`
         await storeReporteData(allPersonalList, todayDate);
         console.log(allPersonalList, "pepapig");
         await actualizarUnidad(assistance.unity._id, assistance.unity);
+        console.log(assistance.unity);
         toast.success('Informe enviado');
 
         setTimeout(() => {
           window.location.reload();
+          
         }, 1000);
 
       } catch (error) {
@@ -112,7 +130,6 @@ export const Personal = () => {
   };
 
 
-  /*--------------------------------------------------*/
 
 
   const handleGenerateExcel = async () => {
@@ -174,22 +191,6 @@ export const Personal = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const data = {
-      fecha: formState.fecha.value,
-      hora: formState.hora.value,
-    };
-
-    const result = await createPost(data);
-    if (result.error) {
-      setMessage('Error al agregar el empleado');
-    } else {
-      await refetch();
-      setMessage('Empleado agregado exitosamente');
-    }
-  };
-
   const isSubmitButtonDisabled = !formState.fecha.isValid || !formState.hora.isValid;
 
   const handleSelectAll = () => {
@@ -209,7 +210,22 @@ export const Personal = () => {
     }
   };
 
+  const handleCommentClick = (publication) => {
+    setSelectedPublication(publication);
+    setShowComments(true);
+  };
 
+  const handleCloseComments = () => {
+    setShowComments(false);
+    setSelectedPublication(null);
+  };
+
+  useEffect(() => {
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
 
   return (
     <div className='personal'>
@@ -239,7 +255,7 @@ export const Personal = () => {
           <Input
             field='fecha'
             label='Fecha'
-            value={fechaDelReporte}
+            value={todayDate}
             onChangeHandler={handleInputValueChange}
             type='text'
             disabled={true}
@@ -255,11 +271,16 @@ export const Personal = () => {
             onBlurHandler={handleInputValidationOnBlur}
           />
           <div className='botones-excel'>
-            <button className="pushable" onClick={handleEnviarReporte} disabled={isGenerating || report}>
+            <button
+              className="pushable"
+              onClick={handleEnviarReporte}
+              disabled={isGenerating || reportSent || isSendingReport}
+            >
               <span className="shadow"></span>
               <span className="edge"></span>
               <span className="front">Enviar</span>
             </button>
+
             {isUserAllowedToGenerateExcel && (
               <button className="pushable" onClick={handleGenerateExcel} disabled={isGenerating || report}>
                 <span className="shadow"></span>
@@ -292,11 +313,14 @@ export const Personal = () => {
                           <h3>{`${personal.name} ${personal.lastName}`}</h3>
                           <p>{personal.number}</p>
                         </div>
-                        <div className="checkbox-dropdown">
-                          <DropdownButton
-                            onSelect={(reason) => handleReasonSelect(reason, personal._id)}
-                          />
-                        </div>
+                        {/* Mostrar Dropdown solo si el checkbox está seleccionado */}
+                        {selectedPersonal[personal._id] && (
+                          <div className="checkbox-dropdown">
+                            <DropdownButton
+                              onSelect={(reason) => { handleReasonSelect(reason, personal._id); }}
+                            />
+                          </div>
+                        )}
                       </div>
                     </span>
                   </label>

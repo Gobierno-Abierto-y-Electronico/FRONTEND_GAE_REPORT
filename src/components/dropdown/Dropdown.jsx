@@ -24,15 +24,16 @@ export const DropdownButton = ({ onSelect }) => {
     }
   };
 
-  const handleSaveCustomReason = () => {
-    if (customReason.trim() !== '') {
-      setSelectedReason("Otro"); // Seleccionar "Otro" después de guardar la razón personalizada
-      onSelect(customReason); // Pasar la razón personalizada al padre (o donde sea necesario)
-      setCustomReason(''); // Limpiar el campo de entrada en el modal
-      setShowModal(false); // Cerrar el modal después de guardar
-      setDropdownOpen(false); // Asegurarse de que el dropdown esté cerrado
-    }
-  };
+const handleSaveCustomReason = () => {
+  if (customReason.trim() !== '') {
+    setSelectedReason(customReason);
+    onSelect(customReason);
+    setShowModal(false);
+    setDropdownOpen(false);
+    setSelectedReason("Otro");
+  }
+};
+
 
   return (
     <div className="dropdown">

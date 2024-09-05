@@ -12,7 +12,6 @@ export const useGetReport = () => {
             try {
                 const data = await getReporteData();
                 setReport(data);
-                console.log(data, "data reporte");
                 if(data.data){
                     setFecha(data.data.createdAt);
                 }
